@@ -1,0 +1,56 @@
+---
+  - name: Install TFTP server
+    ansible.builtin.apt:
+      name: tftpd-hpa
+      state: present
+
+  - name: Install rpm2cpio
+    ansible.builtin.apt:
+      name: rpm2cpio
+      state: present
+
+  - name: Create TFTP directory
+    ansible.builtin.file:
+      path: /srv/tftp/pxelinux.cfg
+      state: directory
+      mode: '0755'
+
+  - name: Copy file-menu
+    ansible.builtin.template:
+      src: default
+      dest: /srv/tftp/pxelinux.cfg/default
+      owner: root
+      group: root
+      mode: 0644
+
+  - name: Copy initrd & vmlinuz files to TFTP
+    ansible.builtin.copy:
+      src: /iso/images/pxeboot/{{ item }}
+      dest: /srv/tftp/{{ item }}
+      mode: '0755'
+      remote_src: true
+    with_items:
+      - initrd.img
+      - vmlinuz
+
+  - name: Extract packages syslinux
+    shell: rpm2cpio /iso/BaseOS/Packages/syslinux-tftpboot-6.04-6.el8.noarch.rpm | cpio -dimv
+    
+  - name: copy files to TFTP share
+    ansible.builtin.copy:
+      src: /home/vagrant/tftpboot/{{ item }}
+      dest: /srv/tftp/{{ item }}
+      mode: '0644'
+      remote_src: true
+    with_items:
+      - pxelinux.0
+      - ldlinux.c32
+      - libmenu.c32
+      - libutil.c32
+      - menu.c32
+      - vesamenu.c32
+
+  - name: Restart TFTP
+    ansible.builtin.service:
+      name: tftpd-hpa
+      state: restarted

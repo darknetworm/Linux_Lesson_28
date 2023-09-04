@@ -1,0 +1,15 @@
+---
+  - name: Setup PXE-server
+    hosts: servers
+    become: true
+
+    pre_tasks:
+      - name: Update repo
+        ansible.builtin.apt:
+          update_cache: yes
+          cache_valid_time: 3600
+
+    roles:
+      - role: setup_apache
+      - role: setup_tftp
+      - role: setup_dhcp

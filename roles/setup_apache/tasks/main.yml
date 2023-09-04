@@ -1,0 +1,67 @@
+---
+  - name: Install Apache server
+    ansible.builtin.apt:
+        name: apache2
+        state: present
+
+# This section copy iso-file from download directory for avoid permanently download
+#  - name: Copy iso-file
+#    ansible.builtin.copy:
+#      src: /download/CentOS-Stream-8-20230830.0-x86_64-dvd1.iso
+#      dest: /tmp/CentOS-Stream-8-20230830.0-x86_64-dvd1.iso
+
+  - name: Download iso-file
+    ansible.builtin.get_url:
+      url: http://mirror.yandex.ru/centos/8-stream/isos/x86_64/CentOS-Stream-8-20230830.0-x86_64-dvd1.iso
+      dest: /tmp/CentOS-Stream-8-20230830.0-x86_64-dvd1.iso
+      mode: '0755'
+
+  - name: Create ISO directory
+    ansible.builtin.file:
+      path: /iso
+      state: directory
+      mode: '0755'
+
+  - name: Mount ISO image
+    ansible.builtin.mount:
+      path: /mnt
+      src: /tmp/CentOS-Stream-8-20230830.0-x86_64-dvd1.iso
+      fstype: iso9660
+      opts: ro,loop
+      state: mounted
+
+  - name: Copy files to /iso
+    ansible.builtin.copy:
+      src: /mnt/
+      dest: /iso
+      remote_src: yes
+      directory_mode: yes
+
+  - name: Copy kikstart file
+    ansible.builtin.template:
+      src: ks.cfg
+      dest: /iso/ks.cfg
+      owner: root
+      group: root
+      mode: 0755
+
+  - name: Copy pxe config
+    ansible.builtin.template:
+      src: pxeboot.conf
+      dest: /etc/apache2/conf-available/pxeboot.conf
+      owner: root
+      group: root
+      mode: 0640
+
+  - name: Enable pxe config
+    ansible.builtin.file:
+      src: /etc/apache2/conf-available/pxeboot.conf
+      dest: /etc/apache2/conf-enabled/pxeboot.conf
+      owner: root
+      group: root
+      state: link
+
+  - name: Restart Apache
+    ansible.builtin.service:
+      name: apache2
+      state: restarted
